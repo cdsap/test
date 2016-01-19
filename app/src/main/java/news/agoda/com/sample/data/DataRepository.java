@@ -1,7 +1,6 @@
 package news.agoda.com.sample.data;
 
 import android.content.Context;
-import android.util.Log;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -11,8 +10,6 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.StringWriter;
-import java.io.Writer;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -22,8 +19,9 @@ import rx.Observable;
 
 
 public class DataRepository {
-    private static final String TAG = DataRepository.class.getSimpleName();
     Context context;
+    JsonWrapper jsonWrapper;
+    BufferedReader streamReader;
 
     public DataRepository(Context context) {
         this.context = context;
@@ -33,11 +31,11 @@ public class DataRepository {
         List<NewsEntity> newsItemList;
         newsItemList = new ArrayList<>();
 
-        String newsListSource = loadResource();
-        JSONObject jsonObject;
-
         try {
-            jsonObject = new JSONObject(newsListSource);
+            String newsListSource = loadResource();
+            JSONObject jsonObject;
+            jsonWrapper = new JsonWrapper(newsListSource);
+            jsonObject = jsonWrapper.getJsonObject();
             JSONArray resultArray = jsonObject.getJSONArray("results");
             for (int i = 0; i < resultArray.length(); i++) {
                 JSONObject newsObject = resultArray.getJSONObject(i);
@@ -45,29 +43,26 @@ public class DataRepository {
                 newsItemList.add(newsEntity);
             }
         } catch (JSONException e) {
-            Log.e(TAG, "fail to parse json string");
-
+            Observable.error(new Throwable("fail to parse json string"));
+        } catch (IOException e) {
+            Observable.error(new Throwable("fail to parse json string"));
         }
         return Observable.just(newsItemList);
     }
 
-    private String loadResource() {
+    public String loadResource() throws IOException {
         InputStream inputStream = context.getResources().openRawResource(R.raw.news_list);
-        Writer writer = new StringWriter();
-        char[] buffer = new char[1024];
+        streamReader = new BufferedReader(new InputStreamReader(inputStream, "UTF-8"));
+        return read(streamReader);
 
-        try {
-            InputStreamReader inputReader = new InputStreamReader(inputStream, "UTF-8");
-            BufferedReader bufferReader = new BufferedReader(inputReader);
-            int n;
-            while ((n = bufferReader.read(buffer)) != -1) {
-                writer.write(buffer, 0, n);
-            }
-            inputStream.close();
-        } catch (IOException ioException) {
-            return null;
+    }
+
+    public String read(BufferedReader f) throws IOException {
+        StringBuilder responseStrBuilder = new StringBuilder();
+        String inputStr;
+        while ((inputStr = f.readLine()) != null) {
+            responseStrBuilder.append(inputStr);
         }
-
-        return writer.toString();
+        return responseStrBuilder.toString();
     }
 }

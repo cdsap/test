@@ -17,10 +17,8 @@ public class MainPresenter {
     GetNewsImpl getNews;
     Context context;
 
-    //@Inject
     public MainPresenter(MainView mainView, Context context) {
         this.mainView = mainView;
-
         this.context = context;
         getNews = new GetNewsImpl(context);
     }
